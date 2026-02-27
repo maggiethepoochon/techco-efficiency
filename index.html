@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tech Company Efficiency Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- Scanline overlay -->
+  <div class="scanline-overlay"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-indicator"></div>
+      <div>
+        <h1 class="header-title">TECH COMPANY EFFICIENCY TRACKER</h1>
+        <p class="header-subtitle" id="headerSubtitle">Revenue & Profit per Employee &mdash; Normalized by Years Since Founding</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-stat">
+        <span class="stat-label">COMPANIES</span>
+        <span class="stat-value" id="companyCount">44</span>
+      </div>
+      <div class="header-stat">
+        <span class="stat-label">DATA POINTS</span>
+        <span class="stat-value" id="dataPointCount">—</span>
+      </div>
+      <div class="header-stat">
+        <span class="stat-label">LAST UPDATED</span>
+        <span class="stat-value">FEB 2026</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Controls Bar -->
+  <div class="controls-bar">
+    <div class="tab-group">
+      <button class="tab active" data-metric="revenue" id="tab-revenue">
+        <span class="tab-icon">$</span>
+        Revenue / Employee
+      </button>
+      <button class="tab" data-metric="profit" id="tab-profit">
+        <span class="tab-icon">&pi;</span>
+        Profit / Employee
+      </button>
+    </div>
+    <div class="controls-right">
+      <div class="xaxis-toggle">
+        <button class="xaxis-btn active" id="xaxis-founding">YEARS SINCE FOUNDING</button>
+        <button class="xaxis-btn" id="xaxis-calendar">CALENDAR YEAR</button>
+      </div>
+      <div class="toggle-group">
+        <label class="toggle-label">
+          <input type="checkbox" id="inflationToggle" checked>
+          <span class="toggle-switch"></span>
+          <span class="toggle-text">2025 DOLLARS</span>
+        </label>
+      </div>
+      <div class="toggle-group">
+        <label class="toggle-label">
+          <input type="checkbox" id="logScaleToggle">
+          <span class="toggle-switch"></span>
+          <span class="toggle-text">LOG SCALE</span>
+        </label>
+      </div>
+      <button class="reset-zoom-btn" id="resetZoomBtn" title="Reset zoom">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        RESET ZOOM
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    <!-- Chart Area -->
+    <div class="chart-container">
+      <div class="chart-header">
+        <span class="chart-title" id="chartTitle">REVENUE PER EMPLOYEE</span>
+        <span class="chart-badge" id="chartBadge">USD</span>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="mainChart"></canvas>
+      </div>
+      <!-- Year Range Slider -->
+      <div class="range-slider-container">
+        <span class="range-label" id="rangeLabel">YEARS SINCE FOUNDING</span>
+        <div class="range-slider-wrapper">
+          <input type="range" id="rangeMin" min="0" max="55" value="0" class="range-input range-min">
+          <input type="range" id="rangeMax" min="0" max="55" value="55" class="range-input range-max">
+          <div class="range-track" id="rangeTrack"></div>
+        </div>
+        <div class="range-values">
+          <span><span id="rangePrefix">Y</span><span id="rangeMinVal">0</span></span>
+          <span><span id="rangePrefix2">Y</span><span id="rangeMaxVal">55</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">COMPANY SELECTION</span>
+        <div class="sidebar-actions">
+          <button class="action-btn" id="selectAll">ALL</button>
+          <button class="action-btn" id="deselectAll">NONE</button>
+        </div>
+      </div>
+
+      <!-- M7 Companies -->
+      <div class="category-group">
+        <div class="category-header">
+          <label class="category-toggle">
+            <input type="checkbox" id="cat-m7" checked>
+            <span class="category-name">M7 COMPANIES</span>
+          </label>
+          <span class="category-count" id="m7-count">7</span>
+        </div>
+        <div class="company-list" id="m7-list"></div>
+      </div>
+
+      <!-- Segments -->
+      <div class="category-group">
+        <div class="category-header">
+          <label class="category-toggle">
+            <input type="checkbox" id="cat-segments">
+            <span class="category-name">PRODUCT SEGMENTS</span>
+          </label>
+          <span class="category-count" id="segments-count">9</span>
+        </div>
+        <div class="segment-note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Uses parent co. total employees (upper bound)
+        </div>
+        <div class="company-list" id="segments-list"></div>
+      </div>
+
+      <!-- Other Tech -->
+      <div class="category-group">
+        <div class="category-header">
+          <label class="category-toggle">
+            <input type="checkbox" id="cat-other">
+            <span class="category-name">OTHER TECH</span>
+          </label>
+          <span class="category-count" id="other-count">28</span>
+        </div>
+        <div class="private-note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Dashed lines = estimated data (private cos.)
+        </div>
+        <div class="company-list" id="other-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-section">
+    <div class="table-header">
+      <span class="table-title">LATEST YEAR DATA — SELECTED COMPANIES</span>
+      <span class="table-badge" id="tableBadge">SORTED BY REVENUE/EMP</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table" id="dataTable">
+        <thead>
+          <tr>
+            <th>COMPANY</th>
+            <th>CATEGORY</th>
+            <th>FOUNDED</th>
+            <th>YEAR</th>
+            <th>YEARS SINCE FOUNDING</th>
+            <th>REVENUE ($B)</th>
+            <th>PROFIT ($B)</th>
+            <th>EMPLOYEES</th>
+            <th>REV/EMP</th>
+            <th>PROFIT/EMP</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-left">
+        <p class="footer-note"><strong>Methodology:</strong> Revenue per employee = (Revenue in $B &times; 1,000,000,000) &divide; Employees. Profit per employee uses the same formula with net income (or operating income for segments). Years since founding normalizes across different founding dates.</p>
+        <p class="footer-note"><strong>Inflation Adjustment:</strong> When "2025 Dollars" is enabled, all values are adjusted using the BLS CPI-U annual averages (base: 2025). This makes cross-era comparisons meaningful&mdash;e.g., Microsoft's 1996 revenue/employee is expressed in today's purchasing power.</p>
+        <p class="footer-note"><strong>Segment Note:</strong> Product segments (YouTube, AWS, iPhone, etc.) use their parent company's total employee count as the denominator, yielding an <em>upper bound</em> on per-employee efficiency since the segment doesn't employ all company staff.</p>
+        <p class="footer-note"><strong>Private Companies:</strong> Data for OpenAI, Anthropic, SpaceX, xAI, and 23 AI startups are estimates from The Information, Bloomberg, Reuters, Sacra, TechCrunch, Forbes, and analyst reports. Shown with dashed lines.</p>
+      </div>
+      <div class="footer-right">
+        <p class="footer-source">Data: SEC filings, company 10-Ks, investor relations, analyst estimates</p>
+        <p class="footer-source">M7 &amp; Netflix: Official SEC filings | Segments: Official segment reporting</p>
+        <p class="footer-source">Private cos: The Information, Bloomberg, Reuters, Sacra, TechCrunch, Forbes</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
